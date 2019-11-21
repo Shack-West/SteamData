@@ -3,7 +3,10 @@ import requests
 from datetime import datetime 
 import time
 import csv
-import tkinter as tk 
+import tkinter as tk
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+
 
 
 
@@ -185,16 +188,41 @@ def main():
     sec_frame.pack()
 
     def get_info():
-        Weapon = input_entry.get()
+        Weapon = input_entry.get().strip()
         Currency = auto_on.get()
         print(Weapon)
         item_info = Item(Weapon, Currency)
-        global item_data
         item_data = ItemData(item_info.get_name(), item_info.get_url())
         time.sleep(3)
-        st_button = tk.Button(sec_frame, text="Begin Tracking!")
+        
+        def begin_collection():
+
+            fig = plt.figure()
+            ax1 = fig.add_subplot(1,1,1)
+            
+            x=[]
+            y=[]
+            
+            def animate(i):
+                item_data.collect_data()
+                value = item_data.current_min()
+                y.append(value)
+                x.append(len(y))
+                ax1.clear()
+                ax1.plot(x,y)
+                plt.xlabel("Penis")
+                plt.ylabel("Penis")
+                plt.title("Penis")
+                
+               
+            ani = FuncAnimation(fig, animate, interval=15000)
+            plt.show()
+                
+                    
+        st_button = tk.Button(sec_frame, text="Begin Tracking!", command=begin_collection)
         st_button.configure(font=("Comic Sans MS", 30, "bold"))
         st_button.pack(pady=50)
+
             
     lock_in = tk.Button(button_frame, text="Lock It In", command=get_info)
     lock_in.configure(font=("Comic Sans MS", 15, "bold"))
