@@ -8,227 +8,99 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 
-
-
 currency_list = {
         "AUD" : "21",
-        "USD" : "1"
+        "USD" : "1",
+        "GBP" : "2",
     }
 
 currencies = ["AUD", "USD"]
 
 
+class dataCollector(object):
 
+    def __init__(self):
+        self._root = tk.Tk()
+        self._root.focus_set()
+        self._root.configure(background="grey31")
+        self._title = tk.Label(self._root, text="Steam Market Analysis Tool", bg="grey31")
+        self._title.configure(font=("Comic Sans MS", 50, "bold"))
+        self._title.pack()
+        self._input_frame = tk.Frame(self._root, bg="grey31")
+        self._input_frame.pack(ipady=20)
+        self._auto_on = tk.StringVar(self._root)
+        self._auto_on.set("Currency")
+        self._currency_choice = tk.OptionMenu(self._input_frame, self._auto_on, "AUD", "USD")
+        self._currency_choice.pack(side=tk.RIGHT, padx=40)
+        self._input_entry = tk.Entry(self._input_frame)
+        self._input_entry.pack(side=tk.RIGHT, ipadx=30)
+        self._prompt = tk.Label(self._input_frame, text="Input Your Item: ", bg="grey31")
+        self._prompt.configure(font=("Comic Sans MS", 15, "bold"))
+        self._prompt.pack(side=tk.LEFT, ipadx=30)
+        self._button_frame = tk.Frame(self._root, bg="grey31")
+        self._button_frame.pack()
+        self._sec_frame = tk.Frame(self._root, bg="grey31")
+        self._sec_frame.pack()
+        self._lock_in = tk.Button(self._button_frame, text="Lock It In", command=self.get_nc)
+        self._lock_in.configure(font=("Comic Sans MS", 15, "bold"))
+        self._lock_in.pack(ipadx=20)
+        self._base_url = None
+        self._skin_name = None
+        self._currency_name = None
+        self._url = None
+        self._new_data = None
+        self._min_value = None
+        self._fig = plt.figure()
+        self._sub = self._fig.add_subplot(1,1,1)
+        self._x = []
+        self._y = []
 
-class Item(object):
-    """
-    Creates an object for the item which the user
-    wishes to find in the steam market/to be stored in the
-    database.
-
-    """
-
-    def __init__(self, skin_name, currency):
-        """instantiates the item"""
-        self._currency = currency
-        self._skin_name = skin_name
-        self._base_url = f"http://steamcommunity.com/market/priceoverview/?currency={currency_list[self._currency]}&appid=730&market_hash_name="
-        self._quoted = quote(self._skin_name)
-        self._item_url = self._base_url + self._quoted
-
-    def get_quoted(self):
-        """
-        gets the encoded the Item string
-        return:
-            self._quoted(string): a string representation of the UTI encoded item name
-            
-        """
-        return self._quoted
-    
-    def get_url(self):
-        """
-        gets the url to contact the steam market with to find the item
-        return:
-            self._item_url(string): creates a string representation of the item url
-            
-        """
-        return self._item_url
-
-    def get_name(self):
-        """Gets the name of the Item
-
-        return:
-            self._skin_name(string): Gets the name of the Item
-        """
-        return self._skin_name
-
-    def get_currency(self):
-        """Gets the currency type being used
-
-        return:
-            self._currency(string): Alphanumeric code for the currency type
-        """
-        return self._currency
-
-    def change_currency(self, currency_code):
-        """
-        Alters the currency used in the data which is accessed
-        Parameters:
-            currency_code(str): The Alphanumeric code of the currency wished to be used
-        return:
-            self._currency(string): currency code 
-            
-        """
-        self._currency = currency_code
-        self._base_url = f"http://steamcommunity.com/market/priceoverview/?currency={currency_list[currency_code]}&appid=730&market_hash_name="
-        self._item_url = self._base_url + self._quoted
+    def get_nc(self):
+        self._skin_name = self._input_entry.get().strip()
+        self._currency_name = self._auto_on.get()
+        self._base_url = f"http://steamcommunity.com/market/priceoverview/?currency={currency_list[self._currency_name]}&appid=730&market_hash_name="
+        self._url = self._base_url + quote(self._skin_name)
+        self._start_button = tk.Button(self._sec_frame, text="Begin Tracking!", command=self.create_plot)
+        self._start_button.configure(font=("Comic Sans MS", 30, "bold"))
+        self._start_button.pack(pady=30)
         
-        return self._currency
-
-class ItemData(object):
-    """Contacts the steam API and then gets the historic data about the weapon"""
-
-    def __init__(self, weapon, weapon_url):
-        """Instantiates the ItemData Object to be searched"""
-        self._weapon = weapon
-        self._weapon_url = weapon_url
-        self._current_iteration = None
-        self._time_of_iteration = None
-        self._historic_mins = []
-        self._historic_times = []
 
     def collect_data(self):
-        """Sends a request to the heavens and poof; here is a dictionary of data
-
-        return:
-            self._current_iteration(dict): A dictionary of Item information
-            self._time_of_iteration(str): The date and time of the current iteration
-        """
-        data_request = requests.get(self._weapon_url)
-        self._current_iteration = data_request.json()
-        self._time_of_iteration = self.get_time()
-        self._historic_mins.append(self.current_min())
-        self._historic_times.append(self.get_time())
-        return self._time_of_iteration, self._current_iteration 
-
-    def current_min(self):
-        """Gets the Lowest price of the current iteration
-
-        return:
-            self._current_iteration['lowest_price'](str): The lowest price on the market
-            
-        """
-        list = self._current_iteration['lowest_price'].split(" ")
-        return float(list[1])
-
-    def get_time(self):
-        time = datetime.now()
-        return time
-
-    def get_times_list(self):
-        return self._historic_times
-
-    def get_min_prices(self):
-        """gets a list of the historic min prices of the item
-
-        return:
-            self._historic_mins(list): A list of the historic min values
-            
-        """
-
-        return self._historic_mins
+        data_request = requests.get(self._url)
+        self._new_data = data_request.json()
         
 
-    def get_median(self):
-        """Gets the median price of the item as of the current iterations
-
-        return:
-            self._current_iteration['median_price'](str): The Current Median Price of the Item (Past Hour)
-        """
-        return self._current_iteration['median_price']
-
-    def get_volume(self):
-        """Finds the total volume of the item sold
-
-        return:
-            self._current_iteration['volume'](str): The current volume of the Item listed
-        """
-        return self._current_iteration['volume']
-    
-
-
-
-
-
-
-
-
-
-def main(): 
-    root = tk.Tk()
-    root.focus_set()
-    root.configure(background="grey31")
-    title = tk.Label(root, text="Steam Market Analysis Tool", bg="grey31")
-    title.configure(font=("Comic Sans MS", 50, "bold"))
-    title.pack()
-    input_frame = tk.Frame(root, bg="grey31")
-    input_frame.pack(ipady=20)
-    auto_on = tk.StringVar(root)
-    auto_on.set("Currency")
-    currency_choice = tk.OptionMenu(input_frame, auto_on, "AUD", "USD")
-    currency_choice.pack(side=tk.RIGHT, padx=40)
-    input_entry = tk.Entry(input_frame)
-    input_entry.pack(side=tk.RIGHT, ipadx=30)
-    prompt = tk.Label(input_frame, text="Input Your Item: ", bg="grey31")
-    prompt.configure(font=("Comic Sans MS", 15, "bold"))
-    prompt.pack(side=tk.LEFT, ipadx=30)
-    button_frame = tk.Frame(root, bg="grey31")
-    button_frame.pack()
-    sec_frame = tk.Frame(root, bg="grey31")
-    sec_frame.pack()
-
-    def get_info():
-        Weapon = input_entry.get().strip()
-        Currency = auto_on.get()
-        print(Weapon)
-        item_info = Item(Weapon, Currency)
-        item_data = ItemData(item_info.get_name(), item_info.get_url())
-        time.sleep(3)
+    def get_cur_min(self):
+        min_value = ''
+        new_data = self._new_data['lowest_price']
+        for i in new_data:
+            if i.isdigit() or i == ".":
+                min_value += i
+        return float(min_value)
         
-        def begin_collection():
+        
 
-            fig = plt.figure()
-            ax1 = fig.add_subplot(1,1,1)
-            
-            x=[]
-            y=[]
-            
-            def animate(i):
-                item_data.collect_data()
-                value = item_data.current_min()
-                y.append(value)
-                x.append(len(y))
-                ax1.clear()
-                ax1.plot(x,y)
-                plt.xlabel("Penis")
-                plt.ylabel("Penis")
-                plt.title("Penis")
-                
-               
-            ani = FuncAnimation(fig, animate, interval=15000)
-            plt.show()
-                
-                    
-        st_button = tk.Button(sec_frame, text="Begin Tracking!", command=begin_collection)
-        st_button.configure(font=("Comic Sans MS", 30, "bold"))
-        st_button.pack(pady=50)
 
-            
-    lock_in = tk.Button(button_frame, text="Lock It In", command=get_info)
-    lock_in.configure(font=("Comic Sans MS", 15, "bold"))
-    lock_in.pack(ipadx=20)
+    def _animate(self, i):
+        self.collect_data()
+        cm = self.get_cur_min()
+        self._y.append(cm)
+        self._x.append(len(self._y))
+        self._sub.clear()
+        self._sub.plot(self._x,self._y)
+        plt.xlabel("Relative Time")
+        plt.ylabel(f"Price ({self._currency_name})")
+        plt.title(f"{self._skin_name}")
+        
+        
 
-    
+    def create_plot(self):
+        animation = FuncAnimation(self._fig, self._animate, interval=15000)
+        plt.show()
+
+def main():
+    m = dataCollector()
+
 
     
 
